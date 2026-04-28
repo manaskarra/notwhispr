@@ -2,28 +2,33 @@
 
 ![Openwhisp](assets/cover.png)
 
-Voice to text, entirely on your machine. Hold **Fn**, speak, release — your words are transcribed, polished, and pasted right where you need them. No cloud, no account, no latency.
+Voice to text on your Mac. Hold **Fn**, speak, release — your words are transcribed, polished, and pasted right where you need them. Run it fully local with Ollama, or bring your own OpenRouter key for cloud rewrites and on-the-fly image generation.
 
-Built in a weekend because I kept getting ads for Wispr Flow and thought — why not build it myself?
+This is a fork of [giusmarci/openwhisp](https://github.com/giusmarci/openwhisp) that adds:
+- **Cloud rewrite via OpenRouter** (BYOK) — skip the local 10 GB model download
+- **Image agent** — say "create an image of …" mid-dictation and the app generates one and pastes the URL
+- **BYO Supabase storage** for the generated images
 
 ## How it works
 
-1. **Hold Fn** — OpenWhisp starts listening
+1. **Hold Fn** — Openwhisp starts listening
 2. **Speak** — your voice is captured locally
-3. **Release Fn** — Whisper transcribes your speech, a local LLM polishes the text, and the result is pasted into whatever app you were using
+3. **Release Fn** — Whisper transcribes locally, the rewrite engine polishes the text (Ollama or OpenRouter), and the result is pasted into the active app
+4. **Image intent** — if you say "create an image about …" the agent classifies the intent, generates an image via OpenRouter, uploads to your Supabase bucket, and pastes the public URL
 
-The entire pipeline runs locally via [Whisper](https://github.com/openai/whisper) (speech-to-text) and [Ollama](https://ollama.com) (text enhancement).
+Speech-to-text always runs locally via [Whisper](https://github.com/openai/whisper). Text rewriting runs either locally via [Ollama](https://ollama.com) or in the cloud via [OpenRouter](https://openrouter.ai), your choice.
 
 ## Features
 
-- **Fully local** — no data leaves your Mac
-- **Styles** — switch between Conversation and Vibe Coding modes depending on context
-- **Enhancement levels** — from raw transcription (No Filter) to professional polish (High)
-- **Intent resolution** — if you change your mind mid-sentence ("make it white... actually, black"), OpenWhisp resolves to your final intent
-- **Auto-paste** — refined text is pasted directly into the active app
-- **Auto-launch Ollama** — if Ollama is installed, OpenWhisp starts it automatically
-- **Setup wizard** — guided first-launch experience for permissions, models, and configuration
-- **Minimal overlay** — a small audio-reactive grid appears at the bottom of your screen during dictation
+- **Speech stays local** — Whisper transcription never leaves your Mac
+- **Pick your engine** — local (Ollama) or cloud (OpenRouter), switchable anytime
+- **Styles** — Conversation and Vibe Coding
+- **Enhancement levels** — No Filter, Soft, Medium, High
+- **Intent resolution** — "make it white… actually, black" → resolves to your final intent
+- **Image agent** — detects image-generation requests during dictation and renders + uploads inline
+- **BYOK** — your OpenRouter key, your Supabase bucket; nothing routes through a hosted service
+- **Auto-paste** into the active app
+- **Setup wizard** for permissions, engine selection, and models
 
 ## Styles
 
@@ -37,57 +42,59 @@ Each style has four enhancement levels: **No Filter**, **Soft**, **Medium**, and
 ## Requirements
 
 - macOS (Apple Silicon recommended)
-- [Ollama](https://ollama.com/download/mac) — OpenWhisp auto-launches it if installed
-- ~10 GB disk space for models (downloaded on first launch)
+- One of:
+  - [Ollama](https://ollama.com/download/mac) for local rewrites (~10 GB disk for the model), or
+  - An [OpenRouter API key](https://openrouter.ai/keys) for cloud rewrites (pennies per dictation)
+- Optional: a [Supabase project](https://supabase.com/dashboard) with a public bucket if you want the image agent
 
 ## Getting started
 
-**1. Install Ollama and download the text model first:**
-
 ```bash
-# Install Ollama from https://ollama.com/download/mac, then:
-ollama serve
-
-# In a new terminal, pull the text enhancement model (~9.6 GB)
-ollama pull gemma4:e4b
-```
-
-**2. Clone and run Openwhisp:**
-
-```bash
-git clone https://github.com/giusmarci/openwhisp.git
-cd openwhisp
+git clone git@github.com:HUSAM-07/notwhispr.git
+cd notwhispr
 npm install
 npm run build:native
 npm run dev
 ```
 
-On first launch, the setup wizard will walk you through:
+The setup wizard walks you through:
 
-1. **Ollama** — verifies the connection. If Ollama is running, it connects automatically.
-2. **Speech model** — downloads Whisper Base Multilingual (~150 MB) automatically.
-3. **Text model** — detects the Gemma 4 model you already pulled.
-4. **Permissions** — microphone access for recording, plus Accessibility and Input Monitoring for Fn key listening and auto-paste.
+1. **Engine** — pick Local (Ollama) or Cloud (OpenRouter); paste your OpenRouter key if you chose cloud
+2. **Speech model** — downloads Whisper Base Multilingual (~150 MB) automatically
+3. **Text model** — pick from your installed Ollama models, or pick an OpenRouter model from the curated list
+4. **Permissions** — microphone, Accessibility, and Input Monitoring
 
-After setup, click into the text field where you want the text to go (an email, chat, code editor, etc.), then hold **Fn** and speak. When you release, the transcribed and enhanced text is automatically pasted into that field. If you move away or no text field is selected, the text is still copied to your clipboard — just use **Cmd+V** to paste it wherever you need.
+After setup, click into any text field, hold **Fn**, speak, release. The polished text is pasted into the field. If no field is focused, the text is copied to your clipboard.
+
+### Enabling the image agent
+
+1. Models page → **Image AI (OpenRouter)** card → toggle **Enable image agent**
+2. Models page → **Image Storage** card → paste your Supabase project URL, secret key, and a public bucket name (e.g. `openflow`)
+3. Dictate something with an image trigger phrase: "create an image of a cat doing backflips"
+4. The image is generated, uploaded to your bucket, and the public URL is pasted alongside your text
+
+The Supabase bucket must exist and be public. The secret key is used only for uploads and is stored locally in `userData/settings.json`, never sent anywhere except your own Supabase project.
 
 ## Default models
 
-| Purpose | Model | Size |
-|---------|-------|------|
-| Speech-to-text | `onnx-community/whisper-base` | ~150 MB |
-| Text enhancement | `gemma4:e4b` | ~9.6 GB |
+| Purpose | Default | Notes |
+|---|---|---|
+| Speech-to-text | `onnx-community/whisper-base` | ~150 MB, runs locally |
+| Text (Ollama) | `gemma4:e4b` | ~9.6 GB |
+| Text (OpenRouter) | `google/gemini-2.5-flash-lite` | ~$0.10/M in, $0.40/M out |
+| Image (OpenRouter) | `google/gemini-2.5-flash-image` | "Nano Banana" |
 
-You can switch to any Ollama-compatible model from the Models page.
+You can switch any of them from the Models page.
 
 ## Tech stack
 
 - **Electron** + **React** + **TypeScript** — desktop shell and UI
 - **@huggingface/transformers** — local Whisper inference
 - **Ollama** — local LLM inference via API
+- **OpenRouter** — cloud LLM + image generation
+- **Supabase Storage** — public CDN for generated images
 - **Swift** — native macOS helper for Fn key listening, focus detection, and paste simulation
 - **electron-vite** — build tooling
-- **Hugeicons** — UI icons
 
 ## Building for distribution
 
@@ -101,26 +108,26 @@ Builds the Electron app, compiles the Swift helper, and packages everything into
 
 ```
 src/
-  main/           # Electron main process
-    dictation.ts    # Transcription + rewrite pipeline
-    ollama.ts       # Ollama API client + auto-launch
-    prompts.ts      # Global rules + style + level prompt matrix
-    settings.ts     # Settings persistence
-    windows.ts      # Window creation and positioning
-  renderer/       # React UI
-    App.tsx         # Sidebar layout, pages, setup wizard, overlay
-    styles.css      # Complete styling
-    audio-recorder.ts # Web Audio recorder with level metering
-  preload/        # Electron preload bridge
-  shared/         # Shared types and constants
+  main/                  # Electron main process
+    dictation.ts           # Transcription + rewrite + image agent pipeline
+    ollama.ts              # Ollama API client + auto-launch
+    openrouter.ts          # OpenRouter chat + image generation client
+    image-agent.ts         # Intent classifier + image orchestrator
+    supabase-storage.ts    # Public-bucket upload helper (BYO settings)
+    config.ts              # .env loader for developer fallback
+    prompts.ts             # Global rules + style + level prompt matrix
+    settings.ts            # Settings persistence
+    windows.ts             # Window creation and positioning
+  renderer/              # React UI
+    App.tsx                # Sidebar layout, pages, setup wizard, overlay
+    styles.css             # Complete styling
+    audio-recorder.ts      # Web Audio recorder with level metering
+  preload/               # Electron preload bridge
+  shared/                # Shared types and constants
 swift/
   OpenWhispHelper.swift  # Native macOS helper
 ```
 
 ## License
 
-MIT
-
----
-
-Made by [Raelume](https://raelume.ai)
+MIT — same as the upstream project. Original work by [giusmarci](https://github.com/giusmarci/openwhisp).
