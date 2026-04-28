@@ -1,0 +1,11 @@
+node_modules
+dist
+release
+build/native/openwhisp-helper
+*.log
+.env
+.env.*
+.DS_Store
+.vite
+*.dmg
+*.zip
