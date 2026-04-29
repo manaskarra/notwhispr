@@ -2,19 +2,23 @@
 
 ![Openwhisp](assets/cover.png)
 
-Voice to text on your Mac. Hold **Fn**, speak, release — your words are transcribed, polished, and pasted right where you need them. Run it fully local with Ollama, or bring your own OpenRouter key for cloud rewrites and on-the-fly image generation.
+Voice to text on your Mac. Hold **Option**, speak, release — your words are transcribed, polished, and pasted right where you need them. Run it fully local with Ollama, or bring your own OpenRouter key for cloud rewrites, terminal commands, editable diagrams, and on-the-fly image generation.
 
 This is a fork of [giusmarci/openwhisp](https://github.com/giusmarci/openwhisp) that adds:
 - **Cloud rewrite via OpenRouter** (BYOK) — skip the local 10 GB model download
 - **Image agent** — say "create an image of …" mid-dictation and the app generates one and pastes the URL
+- **Terminal command mode** — dictate a shell command, paste it as one safe line, and never auto-run it
+- **Editable diagram mode** — turn speech into Excalidraw mindmaps, flowcharts, decision trees, cycles, timelines, and system diagrams
 - **BYO Supabase storage** for the generated images
 
 ## How it works
 
-1. **Hold Fn** — Openwhisp starts listening
+1. **Hold Option** — Openwhisp starts listening
 2. **Speak** — your voice is captured locally
-3. **Release Fn** — Whisper transcribes locally, the rewrite engine polishes the text (Ollama or OpenRouter), and the result is pasted into the active app
-4. **Image intent** — if you say "create an image about …" the agent classifies the intent, generates an image via OpenRouter, uploads to your Supabase bucket, and pastes the public URL
+3. **Release Option** — Whisper transcribes locally, the rewrite engine polishes the text (Ollama or OpenRouter), and the result is pasted into the active app
+4. **Terminal mode** — in supported terminal apps, or with the manual shortcut, speech becomes a single pasted shell command
+5. **Diagram mode** — with the manual shortcut, speech becomes an editable Excalidraw preview that can be copied or saved as PNG
+6. **Image intent** — if you say "create an image about …" the agent classifies the intent, generates an image via OpenRouter, uploads to your Supabase bucket, and pastes the public URL
 
 Speech-to-text always runs locally via [Whisper](https://github.com/openai/whisper). Text rewriting runs either locally via [Ollama](https://ollama.com) or in the cloud via [OpenRouter](https://openrouter.ai), your choice.
 
@@ -26,6 +30,10 @@ Speech-to-text always runs locally via [Whisper](https://github.com/openai/whisp
 - **Enhancement levels** — No Filter, Soft, Medium, High
 - **Intent resolution** — "make it white… actually, black" → resolves to your final intent
 - **Image agent** — detects image-generation requests during dictation and renders + uploads inline
+- **Terminal command dictation** — auto-detects standalone terminal apps and pastes one command line without pressing Enter
+- **Editable Excalidraw diagrams** — generate, adjust, copy, or save PNG diagrams from speech
+- **Floating mode controls** — switch Terminal or Diagram mode from the listening overlay
+- **No-speech guardrails** — empty recordings and common Whisper hallucinations are cancelled instead of pasted
 - **BYOK** — your OpenRouter key, your Supabase bucket; nothing routes through a hosted service
 - **Auto-paste** into the active app
 - **Setup wizard** for permissions, engine selection, and models
@@ -64,7 +72,22 @@ The setup wizard walks you through:
 3. **Text model** — pick from your installed Ollama models, or pick an OpenRouter model from the curated list
 4. **Permissions** — microphone, Accessibility, and Input Monitoring
 
-After setup, click into any text field, hold **Fn**, speak, release. The polished text is pasted into the field. If no field is focused, the text is copied to your clipboard.
+After setup, click into any text field, hold **Option**, speak, release. The polished text is pasted into the field. If no field is focused, the text is copied to your clipboard.
+
+### Terminal command mode
+
+Openwhisp can turn speech into a shell command instead of prose.
+
+- In standalone terminal apps like Terminal.app, iTerm, Warp, WezTerm, Alacritty, Kitty, Ghostty, Hyper, or Tabby, terminal command mode is detected automatically when enabled in settings.
+- Hold **Option + Control** while recording to force terminal command mode in harder-to-detect contexts such as an integrated terminal.
+- Commands are pasted only. Openwhisp does not press Enter or auto-execute them.
+- If the model decides the speech is not a real command, nothing is pasted.
+
+### Diagram mode
+
+Hold **Option + Command** while recording to turn speech into an editable diagram preview. Openwhisp can generate mindmaps, decision trees, flows, cycles, timelines, hierarchies, comparisons, and architecture diagrams.
+
+The preview opens in an Excalidraw window where you can edit the scene, then **Copy PNG** to the clipboard or **Save PNG** to disk.
 
 ### Enabling the image agent
 
@@ -92,8 +115,9 @@ You can switch any of them from the Models page.
 - **@huggingface/transformers** — local Whisper inference
 - **Ollama** — local LLM inference via API
 - **OpenRouter** — cloud LLM + image generation
+- **Excalidraw** — editable diagram preview and PNG export
 - **Supabase Storage** — public CDN for generated images
-- **Swift** — native macOS helper for Fn key listening, focus detection, and paste simulation
+- **Swift** — native macOS helper for Option key listening, focus detection, and paste simulation
 - **electron-vite** — build tooling
 
 ## Building for distribution
@@ -113,13 +137,14 @@ src/
     ollama.ts              # Ollama API client + auto-launch
     openrouter.ts          # OpenRouter chat + image generation client
     image-agent.ts         # Intent classifier + image orchestrator
+    diagram-agent.ts       # Speech-to-diagram JSON generator
     supabase-storage.ts    # Public-bucket upload helper (BYO settings)
     config.ts              # .env loader for developer fallback
-    prompts.ts             # Global rules + style + level prompt matrix
+    prompts.ts             # Global rules + style + level + command prompt matrix
     settings.ts            # Settings persistence
     windows.ts             # Window creation and positioning
   renderer/              # React UI
-    App.tsx                # Sidebar layout, pages, setup wizard, overlay
+    App.tsx                # Sidebar layout, setup wizard, overlay, Excalidraw preview
     styles.css             # Complete styling
     audio-recorder.ts      # Web Audio recorder with level metering
   preload/               # Electron preload bridge
