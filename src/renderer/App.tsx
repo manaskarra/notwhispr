@@ -180,6 +180,7 @@ export function App() {
           if (e.type === 'down') void handleHotkeyDown(e);
           if (e.type === 'modifierChanged') handleHotkeyModifierChanged(e);
           if (e.type === 'up') void handleHotkeyUp();
+          if (e.type === 'stop') void cancelRecording();
         })
       : () => undefined;
     return () => { mounted = false; stopStatus(); stopHotkey(); };

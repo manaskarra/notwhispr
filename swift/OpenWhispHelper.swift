@@ -32,6 +32,7 @@ private var optionIsDown = false
 private var terminalCommandModeIsDown = false
 private var diagramModeIsDown = false
 private let leftOptionKeyCode: Int64 = 58
+private let sKeyCode: Int64 = 1
 
 func emitJSON<T: Encodable>(_ value: T) {
     let encoder = JSONEncoder()
@@ -209,11 +210,24 @@ private func flagsChangedCallback(
     event: CGEvent,
     userInfo: UnsafeMutableRawPointer?
 ) -> Unmanaged<CGEvent>? {
-    guard type == .flagsChanged else {
+    guard type == .flagsChanged || type == .keyDown else {
         return Unmanaged.passUnretained(event)
     }
 
     let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+    if type == .keyDown {
+        let isRepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
+        if optionIsDown && keyCode == sKeyCode && !isRepeat {
+            emitJSON(EventMessage(
+                type: "stop",
+                message: nil,
+                terminalCommandMode: terminalCommandModeIsDown,
+                diagramMode: diagramModeIsDown
+            ))
+        }
+        return Unmanaged.passUnretained(event)
+    }
+
     let isLeftOptionEvent = keyCode == leftOptionKeyCode
     let optionIsCurrentlyDown = isLeftOptionEvent ? event.flags.contains(.maskAlternate) : optionIsDown
     let terminalCommandModeIsCurrentlyDown = event.flags.contains(.maskControl)
@@ -252,7 +266,8 @@ func listenForFnKey() -> Int32 {
         return 1
     }
 
-    let eventMask = CGEventMask(1 << CGEventType.flagsChanged.rawValue)
+    let eventMask = CGEventMask(1 << CGEventType.flagsChanged.rawValue) |
+        CGEventMask(1 << CGEventType.keyDown.rawValue)
     guard let tap = CGEvent.tapCreate(
         tap: .cgSessionEventTap,
         place: .headInsertEventTap,

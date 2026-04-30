@@ -205,7 +205,7 @@ export interface SaveMindmapPngResult {
 }
 
 export interface HotkeyEvent {
-  type: 'down' | 'up' | 'modifierChanged';
+  type: 'down' | 'up' | 'modifierChanged' | 'stop';
   terminalCommandMode?: boolean;
   diagramMode?: boolean;
 }

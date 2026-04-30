@@ -182,6 +182,14 @@ export async function startFnListener(
         });
       }
 
+      if (message.type === 'stop') {
+        onEvent({
+          type: 'stop',
+          terminalCommandMode: Boolean(message.terminalCommandMode),
+          diagramMode: Boolean(message.diagramMode),
+        });
+      }
+
       if (message.type === 'error') {
         onError?.(message.message ?? 'The native helper could not watch the Option key.');
       }
